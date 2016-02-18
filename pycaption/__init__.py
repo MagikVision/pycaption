@@ -5,6 +5,7 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
 from .webvtt import WebVTTReader, WebVTTWriter
+from .mvp import MVPParser
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError)
 
@@ -14,7 +15,8 @@ __all__ = [
     'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
-    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet'
+    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet',
+    'MVPParser'
 ]
 
 SUPPORTED_READERS = (
