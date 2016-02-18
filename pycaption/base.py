@@ -111,6 +111,7 @@ class CaptionNode(object):
     # property of the node, not a type of node itself.
     STYLE = 2
     BREAK = 3
+    COMMENT = 4
 
     def __init__(self, type_, layout_info=None):
         """
@@ -128,17 +129,25 @@ class CaptionNode(object):
         t = self.type_
 
         if t == CaptionNode.TEXT:
-            return repr(self.content)
+            return repr('TEXT: %s' % self.content)
         elif t == CaptionNode.BREAK:
             return repr(u'BREAK')
         elif t == CaptionNode.STYLE:
             return repr(u'STYLE: %s %s' % (self.start, self.content))
+        elif t == CaptionNode.COMMENT:
+            return repr('COMMENT: %s' % self.content)
         else:
             raise RuntimeError(u'Unknown node type: ' + unicode(t))
 
     @staticmethod
     def create_text(text, layout_info=None):
         data = CaptionNode(CaptionNode.TEXT, layout_info=layout_info)
+        data.content = text
+        return data
+
+    @staticmethod
+    def create_comment(text, layout_info=None):
+        data = CaptionNode(CaptionNode.COMMENT, layout_info=layout_info)
         data.content = text
         return data
 
@@ -159,7 +168,7 @@ class Caption(object):
     A single caption, including the time and styling information
     for its display.
     """
-    def __init__(self, start, end, nodes, style={}, layout_info=None):
+    def __init__(self, start, end, nodes, formatted=None, style={}, layout_info=None):
         """
         Initialize the Caption object
         :param start: The start time in microseconds
@@ -221,6 +230,16 @@ class Caption(object):
         """
         def get_text_for_node(node):
             if node.type_ == CaptionNode.TEXT:
+                return node.content
+            if node.type_ == CaptionNode.BREAK:
+                return u'\n'
+            return u''
+        text_nodes = [get_text_for_node(node) for node in self.nodes]
+        return u''.join(text_nodes).strip()
+
+    def get_comment(self):
+        def get_text_for_node(node):
+            if node.type_ == CaptionNode.COMMENT:
                 return node.content
             if node.type_ == CaptionNode.BREAK:
                 return u'\n'
@@ -307,7 +326,7 @@ class CaptionSet(object):
     def get_languages(self):
         return self._captions.keys()
 
-    def get_captions(self, lang):
+    def get_captions(self, lang='en-US'):
         return self._captions.get(lang, [])
 
     def add_style(self, selector, rules):
