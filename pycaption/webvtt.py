@@ -78,8 +78,20 @@ class WebVTTReader(BaseReader):
         nodes = []
         layout_info = None
         found_timing = False
+        found_note = False
+        first_blank_line = False
+
+        # webvtt should always start with `WEBVTT` and an empty line/s
+        if u'WEBVTT' not in lines[0]:
+            raise TypeError
+        # remove webvtt
+        lines.pop(0)
 
         for i, line in enumerate(lines):
+            if i < 1:
+                previous_line = None
+            else:
+                previous_line = lines[i-1]
 
             if u'-->' in line:
                 found_timing = True
@@ -90,35 +102,43 @@ class WebVTTReader(BaseReader):
                         line, last_start_time)
                 except CaptionReadError as e:
                     new_message = u'%s (line %d)' % (e.args[0], timing_line)
-                    six.reraise(type(e), type(e)(new_message), sys.exc_info()[2])
+                    six.reraise(
+                        type(e), type(e)(new_message), sys.exc_info()[2])
 
+            elif ('NOTE' in line) and (previous_line == ''):
+                found_note = True
+                continue
 
             elif u'' == line:
-                if found_timing:
+                if not first_blank_line and found_timing:
+                    # allow new line in cue
+                    first_blank_line = True
+                elif found_timing:
                     if not nodes:
-                        raise CaptionReadSyntaxError(
-                            u'Cue without content. (line %d)' % timing_line)
+                        print('Cue without subtitle')
                     else:
                         found_timing = False
+                        found_note = False
                         caption = Caption(
                             start, end, nodes, layout_info=layout_info)
                         captions.append(caption)
                         nodes = []
             else:
-                if found_timing:
+                if found_note:
+                    nodes.append(CaptionNode.create_comment(line))
+                elif found_timing:
                     if nodes:
                         nodes.append(CaptionNode.create_break())
                     nodes.append(CaptionNode.create_text(
                         self._decode(line)))
                 else:
                     # it's a comment or some metadata; ignore it
-                    pass
+                    print('ignored %s' % line)
 
         # Add a last caption if there are remaining nodes
         if nodes:
-            caption = Caption(start, end, nodes, layout_info=layout_info)
+            caption = Caption(start, end, nodes, '', layout_info=layout_info)
             captions.append(caption)
-
         return captions
 
     def _remove_styles(self, line):
@@ -174,7 +194,8 @@ class WebVTTReader(BaseReader):
         m = m.groups()
 
         if m[2]:
-            # Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
+            # Timestamp takes the form of
+            # [hours]:[minutes]:[seconds].[milliseconds]
             return microseconds(m[0], m[1], m[2].replace(u":", u""), m[3])
         else:
             # Timestamp takes the form of [minutes]:[seconds].[milliseconds]
