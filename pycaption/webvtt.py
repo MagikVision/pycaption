@@ -81,17 +81,9 @@ class WebVTTReader(BaseReader):
         found_note = False
         first_blank_line = False
 
-        # webvtt should always start with `WEBVTT` and an empty line/s
-        if u'WEBVTT' not in lines[0]:
-            raise TypeError
-        # remove webvtt
-        lines.pop(0)
-
         for i, line in enumerate(lines):
-            if i < 1:
-                previous_line = None
-            else:
-                previous_line = lines[i-1]
+
+            previous_line = self._get_previous_line(lines=lines, line_num=i)
 
             if u'-->' in line:
                 found_timing = True
@@ -115,7 +107,8 @@ class WebVTTReader(BaseReader):
                     first_blank_line = True
                 elif found_timing:
                     if not nodes:
-                        print('Cue without subtitle')
+                        # print('Cue without subtitle')
+                        pass
                     else:
                         found_timing = False
                         found_note = False
@@ -133,7 +126,8 @@ class WebVTTReader(BaseReader):
                         self._decode(line)))
                 else:
                     # it's a comment or some metadata; ignore it
-                    print('ignored %s' % line)
+                    # print('ignored %s' % line)
+                    pass
 
         # Add a last caption if there are remaining nodes
         if nodes:
@@ -221,6 +215,13 @@ class WebVTTReader(BaseReader):
         # Must do ampersand last
         s = s.replace(u'&amp;', u'&')
         return s
+
+    def _get_previous_line(self, lines, line_num):
+        if line_num < 1:
+            previous_line = None
+        else:
+            previous_line = lines[line_num-1]
+        return previous_line
 
 
 class WebVTTWriter(BaseWriter):
