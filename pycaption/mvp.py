@@ -25,7 +25,9 @@ class MVPParser(WebVTTReader):
 
         """)
         formatted_cues = []
-        for cue in captions_list.get_captions():
+        captions = captions_list.get_captions()
+        sorted_captions = sorted(captions, key=lambda cue: cue.seq_id)
+        for cue in sorted_captions:
             start = self._timestamp(cue.start)
             end = self._timestamp(cue.end)
             timespan = "{} --> {}".format(start, end)
@@ -58,8 +60,16 @@ class MVPParser(WebVTTReader):
                 raise InvalidWebVTT('Metadata is not a valid JSON')
             if 'Seq' not in metadata:
                 raise InvalidWebVTT('Metadata is missing Seq number')
+            try:
+                cue.seq_id = int(metadata['Seq'])
+            except (TypeError, ValueError):
+                raise InvalidWebVTT('Metadata has invalid sequence id')
             if 'game_id' not in metadata:
                 raise InvalidWebVTT('Metadata is missing Game ID')
+            try:
+                cue.game_id = int(metadata['game_id'])
+            except (TypeError, ValueError):
+                raise InvalidWebVTT('Metadata has invalid game id')
         return captions_list
 
     def _timestamp(self, ts):
