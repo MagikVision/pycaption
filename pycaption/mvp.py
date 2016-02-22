@@ -1,4 +1,6 @@
 import json
+import datetime
+import textwrap
 
 from .webvtt import WebVTTReader
 
@@ -10,11 +12,30 @@ class InvalidWebVTT(Exception):
 class MVPParser(WebVTTReader):
 
     def read(self, content):
-        self.pre_validate(content)
+        self._pre_validate(content)
         captions_list = super(MVPParser, self).read(content)
-        return self.post_validate(captions_list=captions_list)
+        return self._post_validate(captions_list=captions_list)
 
-    def pre_validate(self, content):
+    def get_formatted(self, captions_list):
+        cue_template = textwrap.dedent("""\
+            {timespan}
+
+            NOTE
+            {metadata}
+
+        """)
+        formatted_cues = []
+        for cue in captions_list.get_captions():
+            start = self._timestamp(cue.start)
+            end = self._timestamp(cue.end)
+            timespan = "{} --> {}".format(start, end)
+            metadata = str.strip(cue.get_comment()).strip('\n')
+            cue_packet = cue_template.format(
+                timespan=timespan, metadata=metadata)
+            formatted_cues.append(cue_packet)
+        return 'WEBVTT\n\n' + "".join(formatted_cues)
+
+    def _pre_validate(self, content):
         lines = content.splitlines()
         # webvtt should always start with `WEBVTT` and an empty line/s
         if 'WEBVTT' not in lines[0]:
@@ -25,7 +46,7 @@ class MVPParser(WebVTTReader):
             if line == previous_line and line == '':
                 raise InvalidWebVTT('Consecutive new lines found')
 
-    def post_validate(self, captions_list):
+    def _post_validate(self, captions_list):
         for cue in captions_list.get_captions():
             comment = cue.get_comment()
             if not comment:
@@ -40,3 +61,12 @@ class MVPParser(WebVTTReader):
             if 'game_id' not in metadata:
                 raise InvalidWebVTT('Metadata is missing Game ID')
         return captions_list
+
+    def _timestamp(self, ts):
+        td = datetime.timedelta(microseconds=ts)
+        mm, ss = divmod(td.seconds, 60)
+        hh, mm = divmod(mm, 60)
+        s = "%02d:%02d.%03d" % (mm, ss, td.microseconds/1000)
+        if hh:
+            s = "%d:%s" % (hh, s)
+        return s
