@@ -25,8 +25,7 @@ class MVPParser(WebVTTReader):
 
         """)
         formatted_cues = []
-        captions = captions_list.get_captions()
-        sorted_captions = sorted(captions, key=lambda cue: cue.seq_id)
+        sorted_captions = self.sort(captions_list=captions_list)
         for cue in sorted_captions:
             start = self._timestamp(cue.start)
             end = self._timestamp(cue.end)
@@ -36,6 +35,19 @@ class MVPParser(WebVTTReader):
                 timespan=timespan, metadata=metadata)
             formatted_cues.append(cue_packet)
         return 'WEBVTT\n\n' + "".join(formatted_cues)
+
+    def sort(self, captions_list):
+        return sorted(captions_list, key=lambda cue: cue.seq_id)
+
+    def slice(self, captions_list, start, end):
+        sorted_captions = self.sort(captions_list)
+        results = []
+        for cue in sorted_captions:
+            if cue.seq_id > end:
+                break
+            if cue.seq_id >= start:
+                results.append(cue)
+        return results
 
     def _pre_validate(self, content):
         lines = content.splitlines()
@@ -49,7 +61,10 @@ class MVPParser(WebVTTReader):
                 raise InvalidWebVTT('Consecutive new lines found')
 
     def _post_validate(self, captions_list):
-        for cue in captions_list.get_captions():
+        captions = captions_list.get_captions()
+        if not captions:
+            raise InvalidWebVTT('Cues not found')
+        for cue in captions:
             comment = cue.get_comment()
             if not comment:
                 raise InvalidWebVTT('Metadata not found')
@@ -70,7 +85,7 @@ class MVPParser(WebVTTReader):
                 cue.game_id = int(metadata['game_id'])
             except (TypeError, ValueError):
                 raise InvalidWebVTT('Metadata has invalid game id')
-        return captions_list
+        return captions
 
     def _timestamp(self, ts):
         td = datetime.timedelta(microseconds=ts)

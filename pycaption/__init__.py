@@ -5,7 +5,7 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
 from .webvtt import WebVTTReader, WebVTTWriter
-from .mvp import MVPParser
+from .mvp import MVPParser, InvalidWebVTT
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError)
 
