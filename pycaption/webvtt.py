@@ -79,11 +79,11 @@ class WebVTTReader(BaseReader):
         layout_info = None
         found_timing = False
         found_note = False
-        first_blank_line = False
 
         for i, line in enumerate(lines):
 
             previous_line = self._get_previous_line(lines=lines, line_num=i)
+            next_line = self._get_next_line(lines=lines, line_num=i)
 
             if u'-->' in line:
                 found_timing = True
@@ -97,14 +97,12 @@ class WebVTTReader(BaseReader):
                     six.reraise(
                         type(e), type(e)(new_message), sys.exc_info()[2])
 
-            elif ('NOTE' in line) and (previous_line == ''):
-                found_note = True
+            elif line == 'NOTE' and found_note and previous_line == '':
                 continue
 
             elif u'' == line:
-                if not first_blank_line and found_timing:
-                    # allow new line in cue
-                    first_blank_line = True
+                if next_line == 'NOTE' and found_timing:
+                    found_note = True
                 elif found_timing:
                     if not nodes:
                         # print('Cue without subtitle')
@@ -222,6 +220,12 @@ class WebVTTReader(BaseReader):
         else:
             previous_line = lines[line_num-1]
         return previous_line
+
+    def _get_next_line(self, lines, line_num):
+        try:
+            return lines[line_num + 1]
+        except IndexError:
+            return None
 
 
 class WebVTTWriter(BaseWriter):
