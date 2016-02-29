@@ -17,23 +17,10 @@ class MVPParser(WebVTTReader):
         return self._post_validate(captions_list=captions_list)
 
     def get_formatted(self, captions_list):
-        cue_template = textwrap.dedent("""\
-            {timespan}
-
-            NOTE
-            {metadata}
-
-        """)
         formatted_cues = []
         sorted_captions = self.sort(captions_list=captions_list)
         for cue in sorted_captions:
-            start = self._timestamp(cue.start)
-            end = self._timestamp(cue.end)
-            timespan = "{} --> {}".format(start, end)
-            metadata = str.strip(cue.get_comment()).strip('\n')
-            cue_packet = cue_template.format(
-                timespan=timespan, metadata=metadata)
-            formatted_cues.append(cue_packet)
+            formatted_cues.append(self._format_cue(cue=cue, add_header=False))
         return 'WEBVTT\n\n' + "".join(formatted_cues)
 
     def sort(self, captions_list):
@@ -85,6 +72,7 @@ class MVPParser(WebVTTReader):
                 cue.game_id = int(metadata['game_id'])
             except (TypeError, ValueError):
                 raise InvalidWebVTT('Metadata has invalid game id')
+            cue.formatted = self._format_cue(cue=cue, add_header=True)
         return captions
 
     def _timestamp(self, ts):
@@ -95,3 +83,23 @@ class MVPParser(WebVTTReader):
         if hh:
             s = "%d:%s" % (hh, s)
         return s
+
+    def _format_cue(self, cue, add_header=False):
+        cue_template = textwrap.dedent("""\
+            {timespan}
+
+            NOTE
+            {metadata}
+
+        """)
+        start = self._timestamp(cue.start)
+        end = self._timestamp(cue.end)
+        timespan = "{} --> {}".format(start, end)
+        metadata = str.strip(cue.get_comment()).strip('\n')
+        cue_packet = cue_template.format(
+            timespan=timespan, metadata=metadata)
+
+        if add_header:
+            cue_packet = 'WEBVTT\n\n' + cue_packet
+
+        return cue_packet
