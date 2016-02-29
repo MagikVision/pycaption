@@ -66,12 +66,6 @@ class MVPParser(WebVTTReader):
                 cue.seq_id = int(metadata['Seq'])
             except (TypeError, ValueError):
                 raise InvalidWebVTT('Metadata has invalid sequence id')
-            if 'game_id' not in metadata:
-                raise InvalidWebVTT('Metadata is missing Game ID')
-            try:
-                cue.game_id = int(metadata['game_id'])
-            except (TypeError, ValueError):
-                raise InvalidWebVTT('Metadata has invalid game id')
             cue.formatted = self._format_cue(cue=cue, add_header=True)
         return captions
 
